@@ -35,3 +35,19 @@ end
 
 blocks = HTMLElement[]
 visitor(b, (e) -> getattr(e, "class", "") == "hljs language-json" && tag(e) == :code, blocks)
+
+function extractor(source::HTMLElement)
+    result = ""
+    for e in source.children
+        if !isa(e, HTMLText)
+            result *= extractor(e)
+            continue
+        end
+        result *= e.text
+    end
+    return result
+end
+
+for b in blocks
+    println(extractor(b))
+end
