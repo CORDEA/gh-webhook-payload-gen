@@ -33,8 +33,17 @@ function visitor(source::HTMLElement, predicate::Function, ans::Vector{HTMLEleme
     end
 end
 
+titles = HTMLElement[]
 blocks = HTMLElement[]
-visitor(b, (e) -> getattr(e, "class", "") == "hljs language-json" && tag(e) == :code, blocks)
+visitor(b,
+        (e) -> tag(e) == :h2 &&
+            getattr(e, "class", "") == "" &&
+            getattr(e, "id", "") != "webhook-payload-object-common-properties",
+        titles)
+visitor(b,
+        (e) -> tag(e) == :code &&
+            getattr(e, "class", "") == "hljs language-json",
+        blocks)
 
 function extractor(source::HTMLElement)
     result = ""
