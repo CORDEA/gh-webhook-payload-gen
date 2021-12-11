@@ -2,7 +2,8 @@ using HTTP
 using Gumbo
 
 url = "https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads"
-cache_file = "cache.html"
+cache_dir = "cache"
+cache_file = "$cache_dir/cache.html"
 
 if isfile(cache_file)
     body = open(f->read(f, String), cache_file)
@@ -13,7 +14,7 @@ else
     end
 
     body = String(r.body)
-    open("cache.html", "w") do io
+    open(cache_file, "w") do io
         write(io, body)
     end
 end
@@ -33,17 +34,17 @@ function visitor(source::HTMLElement, predicate::Function, ans::Vector{HTMLEleme
     end
 end
 
-titles = HTMLElement[]
-blocks = HTMLElement[]
+raw_titles = HTMLElement[]
+raw_blocks = HTMLElement[]
 visitor(b,
         (e) -> tag(e) == :h2 &&
             getattr(e, "class", "") == "" &&
             getattr(e, "id", "") != "webhook-payload-object-common-properties",
-        titles)
+        raw_titles)
 visitor(b,
         (e) -> tag(e) == :code &&
             getattr(e, "class", "") == "hljs language-json",
-        blocks)
+        raw_blocks)
 
 function extractor(source::HTMLElement)
     result = ""
@@ -57,6 +58,11 @@ function extractor(source::HTMLElement)
     return result
 end
 
-for b in blocks
-    println(extractor(b))
+titles = map(extractor, raw_titles)
+blocks = map(extractor, raw_blocks)
+
+for (t, b) in zip(titles, blocks)
+    open("$cache_dir/$t.json", "w") do io
+        write(io, b)
+    end
 end
