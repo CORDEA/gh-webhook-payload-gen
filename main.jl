@@ -17,3 +17,21 @@ else
         write(io, body)
     end
 end
+
+html = parsehtml(body).root
+b = first(filter(e -> tag(e) == :body, html.children))
+
+function visitor(source::HTMLElement, predicate::Function, ans::Vector{HTMLElement})
+    for e in source.children
+        if !isa(e, HTMLElement)
+            continue
+        end
+        if predicate(e)
+            push!(ans, e)
+        end
+        visitor(e, predicate, ans)
+    end
+end
+
+blocks = HTMLElement[]
+visitor(b, (e) -> getattr(e, "class", "") == "hljs language-json" && tag(e) == :code, blocks)
