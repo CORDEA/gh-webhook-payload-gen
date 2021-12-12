@@ -11,7 +11,7 @@ function read_cache()
         return []
     end
     json = filter((f) -> endswith(f, ".json"), files)
-    return map((f) -> open(v->read(v, String), "$cache_dir/$f"), json)
+    return Dict(map((f) -> (f[1:end-5], open(v->read(v, String), "$cache_dir/$f")), json))
 end
 
 function visitor(source::HTMLElement, predicate::Function, ans::Vector{HTMLElement})
@@ -67,12 +67,12 @@ function parse_html(body::String)
             raw_blocks)
     titles = map(extractor, raw_titles)
     blocks = map(extractor, raw_blocks)
-    return zip(titles, blocks)
+    return Dict(zip(titles, blocks))
 end
 
 function main()
-    cache_files = read_cache()
-    if isempty(cache_files)
+    payloads = read_cache()
+    if isempty(payloads)
         if isfile(cache_file)
             body = open(f->read(f, String), cache_file)
         else
