@@ -73,7 +73,7 @@ end
 
 function main()
     if isempty(ARGS)
-        return
+        error("key is required.")
     end
 
     payloads = read_cache()
@@ -94,7 +94,7 @@ function main()
 
     key = first(ARGS)
     if !haskey(payloads, key)
-        return
+        error("$key cannot be found.")
     end
 
     JSON.print(JSON.parse(payloads[key]), 4)
