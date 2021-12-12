@@ -71,6 +71,10 @@ function parse_html(body::String)
 end
 
 function main()
+    if isempty(ARGS)
+        return
+    end
+
     payloads = read_cache()
     if isempty(payloads)
         if isfile(cache_file)
@@ -86,6 +90,13 @@ function main()
             end
         end
     end
+
+    key = first(ARGS)
+    if !haskey(payloads, key)
+        return
+    end
+
+    println(payloads[key])
 end
 
 main()
