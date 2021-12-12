@@ -5,22 +5,14 @@ url = "https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhoo
 cache_dir = "cache"
 cache_file = "$cache_dir/cache.html"
 
-if isfile(cache_file)
-    body = open(f->read(f, String), cache_file)
-else
-    r = HTTP.request("GET", url)
-    if r.status != 200
-        return
+function read_cache()
+    files = readdir(cache_dir)
+    if isempty(files)
+        return []
     end
-
-    body = String(r.body)
-    open(cache_file, "w") do io
-        write(io, body)
-    end
+    json = filter((f) -> endswith(f, ".json"), files)
+    return map((f) -> open(v->read(v, String), "$cache_dir/$f"), json)
 end
-
-html = parsehtml(body).root
-b = first(filter(e -> tag(e) == :body, html.children))
 
 function visitor(source::HTMLElement, predicate::Function, ans::Vector{HTMLElement})
     for e in source.children
@@ -34,18 +26,6 @@ function visitor(source::HTMLElement, predicate::Function, ans::Vector{HTMLEleme
     end
 end
 
-raw_titles = HTMLElement[]
-raw_blocks = HTMLElement[]
-visitor(b,
-        (e) -> tag(e) == :h2 &&
-            getattr(e, "class", "") == "" &&
-            getattr(e, "id", "") != "webhook-payload-object-common-properties",
-        raw_titles)
-visitor(b,
-        (e) -> tag(e) == :code &&
-            getattr(e, "class", "") == "hljs language-json",
-        raw_blocks)
-
 function extractor(source::HTMLElement)
     result = ""
     for e in source.children
@@ -58,11 +38,54 @@ function extractor(source::HTMLElement)
     return result
 end
 
-titles = map(extractor, raw_titles)
-blocks = map(extractor, raw_blocks)
+function fetch()
+    r = HTTP.request("GET", url)
+    if r.status != 200
+        return
+    end
 
-for (t, b) in zip(titles, blocks)
-    open("$cache_dir/$t.json", "w") do io
-        write(io, b)
+    body = String(r.body)
+    open(cache_file, "w") do io
+        write(io, body)
+    end
+    return body
+end
+
+function parse_html(body::String)
+    html = parsehtml(body).root
+    b = first(filter(e -> tag(e) == :body, html.children))
+    raw_titles = HTMLElement[]
+    raw_blocks = HTMLElement[]
+    visitor(b,
+            (e) -> tag(e) == :h2 &&
+                getattr(e, "class", "") == "" &&
+                getattr(e, "id", "") != "webhook-payload-object-common-properties",
+            raw_titles)
+    visitor(b,
+            (e) -> tag(e) == :code &&
+                getattr(e, "class", "") == "hljs language-json",
+            raw_blocks)
+    titles = map(extractor, raw_titles)
+    blocks = map(extractor, raw_blocks)
+    return zip(titles, blocks)
+end
+
+function main()
+    cache_files = read_cache()
+    if isempty(cache_files)
+        if isfile(cache_file)
+            body = open(f->read(f, String), cache_file)
+        else
+            body = fetch()
+        end
+
+        payloads = parse_html(body)
+        for (t, b) in payloads
+            open("$cache_dir/$t.json", "w") do io
+                write(io, b)
+            end
+        end
     end
 end
+
+main()
