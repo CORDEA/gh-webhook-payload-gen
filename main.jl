@@ -1,5 +1,6 @@
 using HTTP
 using Gumbo
+using JSON
 
 url = "https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads"
 cache_dir = "cache"
@@ -96,7 +97,7 @@ function main()
         return
     end
 
-    println(payloads[key])
+    JSON.print(JSON.parse(payloads[key]), 4)
 end
 
 main()
